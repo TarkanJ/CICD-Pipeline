@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Python ToDo App</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>Todo List</h1>
+
+        <form action="/add" method="POST" class="add-form">
+            <input
+                type="text"
+                name="task"
+                placeholder="Add a new task..."
+                required
+            >
+
+            <button type="submit">Add</button>
+        </form>
+
+        <div class="todo-list">
+
+            {% for todo in todos %}
+
+            <div class="todo-item">
+
+                <form action="/toggle/{{ todo.id }}" method="POST">
+                    <input
+                        type="checkbox"
+                        onchange="this.form.submit()"
+                        {% if todo.done %}checked{% endif %}
+                    >
+                </form>
+
+                <span class="{% if todo.done %}completed{% endif %}">
+                    {{ todo.task }}
+                </span>
+
+                <form action="/delete/{{ todo.id }}" method="POST">
+                    <button class="delete-btn" type="submit">
+                        🗑
+                    </button>
+                </form>
+
+            </div>
+
+            {% endfor %}
+
+        </div>
+
+    </div>
+
+</body>
+</html>
+
+

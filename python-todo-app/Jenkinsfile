@@ -1,0 +1,92 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE = "ghcr.io/TVUJ_GITHUB/todo-app"
+        NAMESPACE = "martino-todo"
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                sh 'python3 -m pip install -r requirements.txt'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh 'python3 -m pytest -v'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    env.IMAGE_TAG = sh(
+                        script: 'git rev-parse --short HEAD',
+                        returnStdout: true
+                    ).trim()
+                }
+
+                sh 'docker build -t $IMAGE:$IMAGE_TAG .'
+            }
+        }
+
+        stage('Push Image') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'ghcr-creds',
+                        usernameVariable: 'GH_USER',
+                        passwordVariable: 'GH_TOKEN'
+                    )
+                ]) {
+                    sh '''
+                        echo "$GH_TOKEN" | docker login ghcr.io \
+                          -u "$GH_USER" --password-stdin
+
+                        docker push "$IMAGE:$IMAGE_TAG"
+
+                        docker logout ghcr.io
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                sh '''
+                    kubectl apply -f k8s/namespace.yaml
+                    kubectl apply -f k8s/pvc.yaml
+                    kubectl apply -f k8s/deployment.yaml
+                    kubectl apply -f k8s/service.yaml
+
+                    kubectl set image deployment/todo-app \
+                      todo-app="$IMAGE:$IMAGE_TAG" \
+                      -n "$NAMESPACE"
+
+                    kubectl rollout status deployment/todo-app \
+                      -n "$NAMESPACE" --timeout=180s
+                '''
+            }
+        }
+
+    }
+
+    post {
+        success {
+            echo 'CI/CD Pipeline completed successfully!'
+        }
+
+        failure {
+            echo 'Pipeline failed. Check Jenkins console output.'
+        }
+    }
+}
