@@ -1,0 +1,55 @@
+Nektere problemy ktere mohou behemm spusteni nastat, pokud nefunguje
+spusteni: python3 app.py
+========================
+
+python3 -m venv .venv => Na Ubuntu instalace závislosti projektu do .venv,
+
+ne do systémového Pythonu
+
+- pokud tento příkaz selže kvůli chybějícímu modulu
+
+=> sudo apt update
+=> sudo apt install python3-venv python3-pip
+
+- pokud chyba:
+line 1, in <module>
+    from flask import Flask, render_template, request, redirect
+ModuleNotFoundError: No module named 'flask'
+
+=> python3 -m pip install flask
+
+python3 -m pip show flask
+
+Name: Flask
+Version: 3.1.3
+Summary: A simple framework for building complex web applications.
+Home-page:
+Author:
+Author-email:
+License:
+Location: /home/jojovaio/.local/lib/python3.10/site-packages
+Requires: blinker, click, itsdangerous, jinja2, markupsafe, werkzeug
+Required-by:
+
+python3 -m pip show pytest
+
+WARNING: Package(s) not found: pytest
+
+=> python3 -m pip install flask pytest
+
+python3 -m pytest -v => Melo by byt OK! 
+python3 -m pytest -v
+================================================= test session starts =================================================
+platform linux -- Python 3.10.12, pytest-9.1.1, pluggy-1.6.0 -- /usr/bin/python3
+cachedir: .pytest_cache
+rootdir: /home/jojovaio/MARTINO_PROJECT/TarkanJ_GITHUB/CICD-Pipeline/python-todo-app
+plugins: langsmith-0.7.6, anyio-4.12.1
+collected 3 items
+
+tests/test_app.py::test_homepage PASSED                                                                         [ 33%]
+tests/test_app.py::test_add_task PASSED                                                                         [ 66%]
+tests/test_app.py::test_delete_task PASSED                                                                      [100%]
+
+================================================== 3 passed in 0.21s ==================================================
+
+HOTOVO OK!
