@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: todo-app
-  namespace: martino-todo
+  namespace: martino
 
 spec:
   replicas: 1
@@ -20,7 +20,7 @@ spec:
       containers:
         - name: todo-app
 
-          image: ghcr.io/TVUJ_GITHUB/todo-app:latest
+          image: ghcr.io/https://github.com/TarkanJ/CICD-Pipeline.git/python-todo-app:latest
 
           ports:
             - containerPort: 8009

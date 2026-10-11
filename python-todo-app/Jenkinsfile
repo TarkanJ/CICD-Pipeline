@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        IMAGE = "ghcr.io/TVUJ_GITHUB/todo-app"
-        NAMESPACE = "martino-todo"
+        IMAGE = "ghcr.io/https://github.com/TarkanJ/CICD-Pipeline.git/python-todo-app"
+        NAMESPACE = "martino"
     }
 
     stages {
