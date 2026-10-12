@@ -28,6 +28,10 @@ def init_db():
     conn.commit()
     conn.close()
 
+# Inicializace databaze pri nacteni aplikace
+# Pridano, kdyby problem - muze se odstranit
+init_db()
+
 
 @app.route("/")
 def index():
