@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        IMAGE = "ghcr.io/https://github.com/TarkanJ/CICD-Pipeline.git/python-todo-app"
+        IMAGE = "ghcr.io/tarkanj/python-todo-app:latest"
         NAMESPACE = "martino"
     }
 
