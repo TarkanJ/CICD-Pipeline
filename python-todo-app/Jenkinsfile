@@ -2,91 +2,95 @@ pipeline {
     agent any
 
     environment {
-        IMAGE = "ghcr.io/tarkanj/python-todo-app:latest"
-        NAMESPACE = "martino"
+        REPO_URL = 'https://github.com/TarkanJ/CICD-Pipeline.git'
+        BRANCH = 'main'
+        NAMESPACE = 'martino'
+        K8S_SERVER = 'https://192.168.6.167:6443'
+        K8S_CA = '/var/jenkins_home/kubernetes-ca.crt'
     }
 
     stages {
-
         stage('Checkout') {
             steps {
-                checkout scm
+                git branch: "${BRANCH}", url: "${REPO_URL}"
             }
         }
+        
+        stage('Test Kubernetes Access') {
+        steps {
+        withCredentials([
+            string(
+                credentialsId: 'k8s-martino-token',
+                variable: 'K8S_TOKEN'
+            )
+        ]) {
+            sh '''
+                set +x
+                set -eu
 
-        stage('Install Dependencies') {
-            steps {
-                sh 'python3 -m pip install -r requirements.txt'
-            }
+                export KUBECONFIG="$WORKSPACE/kubeconfig-test"
+                umask 077
+                trap 'rm -f "$KUBECONFIG"' EXIT
+
+                cat > "$KUBECONFIG" <<EOF
+apiVersion: v1
+kind: Config
+clusters:
+- name: homelab
+  cluster:
+    server: https://192.168.6.167:6443
+    certificate-authority: /var/jenkins_home/kubernetes-ca.crt
+contexts:
+- name: jenkins-martino
+  context:
+    cluster: homelab
+    user: jenkins-deployer
+    namespace: martino
+current-context: jenkins-martino
+users:
+- name: jenkins-deployer
+  user:
+    token: ${K8S_TOKEN}
+EOF
+
+                echo "1. Kubernetes API authentication"
+                kubectl get pods -n martino
+
+                echo "2. Deployment permission"
+                RESULT=$(kubectl auth can-i patch deployments -n martino)
+                echo "Deployment permission: $RESULT"
+                test "$RESULT" = "yes"
+                
+                echo "3. Namespace creation restriction"
+                kubectl auth can-i create namespaces || true
+                echo "Kubernetes access checks completed."
+            '''
         }
+    }
+}
 
-        stage('Test') {
-            steps {
-                sh 'python3 -m pytest -v'
-            }
-        }
-
-        stage('Build Docker Image') {
-            steps {
-                script {
-                    env.IMAGE_TAG = sh(
-                        script: 'git rev-parse --short HEAD',
-                        returnStdout: true
-                    ).trim()
-                }
-
-                sh 'docker build -t $IMAGE:$IMAGE_TAG .'
-            }
-        }
-
-        stage('Push Image') {
-            steps {
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'ghcr-creds',
-                        usernameVariable: 'GH_USER',
-                        passwordVariable: 'GH_TOKEN'
-                    )
-                ]) {
-                    sh '''
-                        echo "$GH_TOKEN" | docker login ghcr.io \
-                          -u "$GH_USER" --password-stdin
-
-                        docker push "$IMAGE:$IMAGE_TAG"
-
-                        docker logout ghcr.io
-                    '''
-                }
-            }
-        }
-
-        stage('Deploy to Kubernetes') {
+        stage('Test Python Application') {
             steps {
                 sh '''
-                    kubectl apply -f k8s/namespace.yaml
-                    kubectl apply -f k8s/pvc.yaml
-                    kubectl apply -f k8s/deployment.yaml
-                    kubectl apply -f k8s/service.yaml
+                    set -eu
+                    cd python-todo-app
 
-                    kubectl set image deployment/todo-app \
-                      todo-app="$IMAGE:$IMAGE_TAG" \
-                      -n "$NAMESPACE"
-
-                    kubectl rollout status deployment/todo-app \
-                      -n "$NAMESPACE" --timeout=180s
+                    docker run --rm \
+                        -v "$PWD:/app" \
+                        -w /app \
+                        python:3.12-slim \
+                        sh -c "pip install --no-cache-dir -r requirements.txt && python -m pytest -v"
                 '''
             }
         }
-
     }
 
     post {
         success {
-            echo 'CI/CD Pipeline completed successfully!'
+            echo 'Kubernetes access and application tests completed successfully.'
         }
-
         failure {
-            echo 'Pipeline failed. Check Jenkins console output.'
+            echo 'Pipeline failed. Check the failed stage in Console Output.'
         }
     }
 }
