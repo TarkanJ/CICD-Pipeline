@@ -1,0 +1,93 @@
+pipeline {
+    agent any
+
+    environment {
+        REPO_URL = 'https://github.com/TarkanJ/CICD-Pipeline.git'
+        BRANCH = 'main'
+        NAMESPACE = 'martino'
+        K8S_SERVER = 'https://192.168.6.167:6443'
+        K8S_CA = '/var/jenkins_home/kubernetes-ca.crt'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: "${BRANCH}", url: "${REPO_URL}"
+            }
+        }
+
+        stage('Test Kubernetes Access') {
+            steps {
+                withCredentials([
+                    string(
+                        credentialsId: 'k8s-martino-token',
+                        variable: 'K8S_TOKEN'
+                    )
+                ]) {
+                    sh '''
+                        set +x
+                        set -eu
+
+                        export KUBECONFIG="$WORKSPACE/kubeconfig-test"
+                        umask 077
+                        trap 'rm -f "$KUBECONFIG"' EXIT
+
+                        cat > "$KUBECONFIG" <<EOF
+apiVersion: v1
+kind: Config
+clusters:
+- name: homelab
+  cluster:
+    server: ${K8S_SERVER}
+    certificate-authority: ${K8S_CA}
+contexts:
+- name: jenkins-martino
+  context:
+    cluster: homelab
+    user: jenkins-deployer
+    namespace: ${NAMESPACE}
+current-context: jenkins-martino
+users:
+- name: jenkins-deployer
+  user:
+    token: ${K8S_TOKEN}
+EOF
+
+                        echo "1. Kubernetes API authentication"
+                        kubectl get pods -n "$NAMESPACE"
+
+                        echo "2. Deployment permission"
+                        kubectl auth can-i patch deployments -n "$NAMESPACE"
+
+                        echo "3. Namespace creation restriction"
+                        kubectl auth can-i create namespaces
+                    '''
+                }
+            }
+        }
+
+        stage('Test Python Application') {
+            steps {
+                sh '''
+                    set -eu
+                    cd python-todo-app
+
+                    docker run --rm \
+                        -v "$PWD:/app" \
+                        -w /app \
+                        python:3.12-slim \
+                        sh -c "pip install --no-cache-dir -r requirements.txt && python -m pytest -v"
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Kubernetes access and application tests completed successfully.'
+        }
+        failure {
+            echo 'Pipeline failed. Check the failed stage in Console Output.'
+        }
+    }
+}
