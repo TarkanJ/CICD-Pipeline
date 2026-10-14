@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: todo-app
+  name: python-todo-app
   namespace: martino
 
 spec:
@@ -9,16 +9,16 @@ spec:
 
   selector:
     matchLabels:
-      app: todo-app
+      app: python-todo-app
 
   template:
     metadata:
       labels:
-        app: todo-app
+        app: python-todo-app
 
     spec:
       containers:
-        - name: todo-app
+        - name: python-todo-app
 
           image: ghcr.io/tarkanj/python-todo-app:latest
 
@@ -30,7 +30,7 @@ spec:
               value: /data/todo.db
 
           volumeMounts:
-            - name: todo-storage
+            - name: python-todo-storage
               mountPath: /data
 
           readinessProbe:
@@ -48,6 +48,6 @@ spec:
             periodSeconds: 20
 
       volumes:
-        - name: todo-storage
+        - name: python-todo-storage
           persistentVolumeClaim:
-            claimName: todo-pvc
+            claimName: python-todo-pvc
