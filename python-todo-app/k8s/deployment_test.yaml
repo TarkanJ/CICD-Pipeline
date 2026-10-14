@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: python-todo-app
+  namespace: martino
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: python-todo-app
+
+  template:
+    metadata:
+      labels:
+        app: python-todo-app
+
+    spec:
+      containers:
+        - name: python-todo-app
+
+          image: ghcr.io/tarkanj/python-todo-app
+
+          ports:
+            - containerPort: 8009
+
+          env:
+            - name: DATABASE_PATH
+              value: /tmp/todo.db
+
+          readinessProbe:
+            tcpSocket:
+              port: 8009
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+          livenessProbe:
+            tcpSocket:
+              port: 8009
+            initialDelaySeconds: 15
+            periodSeconds: 20
