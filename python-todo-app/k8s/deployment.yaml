@@ -20,34 +20,23 @@ spec:
       containers:
         - name: python-todo-app
 
-          image: ghcr.io/tarkanj/python-todo-app:latest
+          image: ghcr.io/tarkanj/python-todo-app
 
           ports:
             - containerPort: 8009
 
           env:
             - name: DATABASE_PATH
-              value: /data/todo.db
-
-          volumeMounts:
-            - name: python-todo-storage
-              mountPath: /data
+              value: /tmp/todo.db
 
           readinessProbe:
-            httpGet:
-              path: /
+            tcpSocket:
               port: 8009
             initialDelaySeconds: 5
             periodSeconds: 10
 
           livenessProbe:
-            httpGet:
-              path: /
+            tcpSocket:
               port: 8009
             initialDelaySeconds: 15
             periodSeconds: 20
-
-      volumes:
-        - name: python-todo-storage
-          persistentVolumeClaim:
-            claimName: python-todo-pvc
