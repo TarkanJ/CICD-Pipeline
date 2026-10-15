@@ -17,6 +17,9 @@ spec:
         app: python-todo-app
 
     spec:
+      imagePullSecrets:
+        - name: ghcr-secret
+
       containers:
         - name: python-todo-app
 
