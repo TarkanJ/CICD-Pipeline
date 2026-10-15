@@ -20,7 +20,7 @@ spec:
       containers:
         - name: python-todo-app
 
-          image: ghcr.io/tarkanj/python-todo-app:latest
+          image: ghcr.io/tarkanj/python-todo-app:96b6e81
 
           ports:
             - containerPort: 8009
